@@ -22,15 +22,33 @@ import ij.ImageJ;
  *
  */
 public class SVDandFT {
-/*	
+	
 	public static void invertSVD(SimpleMatrix A)
 	{
 		
 					
 		System.out.println("A = " + A.toString());
+		System.out.println("det(A) = " + A.determinant());
+		
+		DecompositionSVD svd = new DecompositionSVD(A);
 		
 		//Compute the inverse of A without using inverse()				
 		//TODO 
+		
+		//inverse without A.inverse()
+		/*DecompositionSVD svd = new DecompositionSVD(A); //r
+		
+		SimpleMatrix SVDinv = new SimpleMatrix(3,3);
+		Sinv = SimpleOperators.multiplyMatrixProd(svd.getU(), svd.getreciprocalS());
+		Sinv = SimpleOperators.multiplyMatrixProd(Sinv, svd.getV().transposed());
+		System.out.println("SVD inv: " + Sinv);
+		SimpleMatrix inv = new SimpleMatrix(A);
+		inv.inverse(InversionType.INVERT_QR );
+		System.out.println("True inv: " + inv);*/
+		
+		System.out.println("U: " + svd.getU().toString());
+		System.out.println("S: " + svd.getS().toString());
+		System.out.println("V: " + svd.getV().toString());
 		
 		//Check output: re-compute A = U * S * V^T
 		SimpleMatrix temp = SimpleOperators.multiplyMatrixProd(svd.getU(), svd.getS());
@@ -44,12 +62,16 @@ public class SVDandFT {
 
 		int size = Math.min(Sinv.getCols(), Sinv.getRows());
 		SimpleVector SinvDiag = new SimpleVector( size);
+		double [] SingleValues = new double[size];
+		//SingleValues = svd.getSingularValues();
+		for(int i = 0; i < size; i++) {
+			SinvDiag.setElementValue(i, 1/svd.getSingularValues()[i]);
+		}
 		
-		//TODO
-		//TODO
-		//TODO
+		
 		
 		Sinv.setDiagValue(SinvDiag);
+		System.out.println("Singular values = " + svd.getS().getDiag().toString());
 		
 		//Compare our implementation to svd.getreciprocalS()
 		System.out.println("Sinv = " + Sinv.toString());
@@ -63,7 +85,7 @@ public class SVDandFT {
 		
 		//Condition number
 		//TODO
-		System.out.println("Cond(A) = " + cond);
+		System.out.println("Cond(A) = " + svd.cond());
 		
 		//introduce a rank deficiency
 		double eps = 10e-3;
@@ -72,9 +94,10 @@ public class SVDandFT {
 		for(int i = 0; i < sInd; i++)
 		{
 			double val = svd.getS().getElement(i, i);
-			//TODO
-			//TODO
-			//TODO
+			if (val < eps) {
+				Slowrank.setElementValue(i, i, .0f);
+			}
+			
 		}
 		
 		SimpleMatrix templowrank = SimpleOperators.multiplyMatrixProd(svd.getU(), Slowrank);
@@ -106,7 +129,14 @@ public class SVDandFT {
 		//SimpleVector xn = SimpleOperators.multiply(Ainv, bn);
 				
 		System.out.println("Modification of x " + SimpleOperators.divideElementWise(xn, x).toString());
+		
+		
+		//R) see zero subspace
+		SimpleVector nullspace = new SimpleVector(svd.getV().getCol(2));
+		SimpleVector bnull = new SimpleVector(SimpleOperators.multiply(Alowrank, nullspace));
+		System.out.println("Alowrank*vnullspace = " + bnull.toString());
 	}
+
 	
 	public static void optimizationProblem1(SimpleMatrix A, int rankDeficiency)
 	{
@@ -141,17 +171,19 @@ public class SVDandFT {
 		
 		//Compute mean of remaining singular values
 		double mean = 0;
-		//TODO
-		//TODO
-		//TODO
+		SimpleVector Vones = new SimpleVector(1,newRank);
+		mean = SimpleOperators.multiplyInnerProd(Vones, svd.getS().getDiag());
+		mean = mean/newRank;
+
 		
 		//Create new Singular matrix
 		SimpleMatrix Slowrank = new SimpleMatrix(svd.getS().getRows(), svd.getS().getCols());
 		Slowrank.zeros();
 		//Fill in remaining singular values with the mean.
-		//TODO
-		//TODO
-		//TODO
+
+		for(int i = 0; i < newRank; i++) {
+			Slowrank.setElementValue(i, i, mean);
+		}
 		
 		//compute A0
 		SimpleMatrix temp = SimpleOperators.multiplyMatrixProd(svd.getU(), Slowrank);
@@ -204,9 +236,10 @@ public class SVDandFT {
 		// solution.
 		
 		//get solution for b
-		//TODO
-		//TODO
+		SimpleMatrix Apinv = new SimpleMatrix(A.inverse(InversionType.INVERT_SVD));
 	
+		SimpleVector b = new SimpleVector(SimpleOperators.multiply(Apinv, y));
+			
 		
 		LinearFunction lFunc = new LinearFunction();
 		lFunc.setM(b.getElement(0));
@@ -214,7 +247,7 @@ public class SVDandFT {
 		VisualizationUtil.createScatterPlot(xCoords, yCoords, lFunc).show();
 		
 	}
-	
+
 	public static void optimizationProblem2(SimpleMatrix b)
 	{
 		System.out.println("Optimization Problem 2");
@@ -227,30 +260,34 @@ public class SVDandFT {
 		// where the measurement matrix M is built from single elements of the
 		// sum.
 		// Given the four points we get four equations and therefore four rows in M:
-		
 		SimpleMatrix M = new SimpleMatrix( b.getCols(), 4);
 		
 		for(int i = 0; i < b.getCols(); i++)
-		{	
+		{				
 			// i-th column of b contains a vector. First entry of M is x^2
 			//Setup measurement matrix M
-			//TODO
-			//TODO
-			//TODO
-			//TODO
+			double b1i = b.getCol(i).getElement(0);
+			double b2i = b.getCol(i).getElement(1);
+			M.setRowValue(i, new SimpleVector(b1i*b1i, b1i*b2i, b1i*b2i, b2i*b2i));
+
+
 		}
 		
 		// TASK: estimate the matrix A
 		// HINT: Nullspace
 		DecompositionSVD svd = new DecompositionSVD(M);
-		//TODO
-		//TODO
 		
+		System.out.println("Smallest sigma = " + svd.getS().getDiag().min());
+		int lastVcol = svd.getV().getCols();
+		SimpleVector a = svd.getV().getCol(lastVcol-1);
 		//We need to reshape the vector back to the desired 2x2 matrix form
+	
 		SimpleMatrix A = new SimpleMatrix(2,2);
-		//TODO
-		//TODO
+		A.setRowValue(0, a.getSubVec(0, 2));
+		A.setRowValue(1, a.getSubVec(2, 2));
 		
+		System.out.println("A: " + A.toString());
+				
 		//check if Frobenius norm is 1.0
 		double normF = A.norm(MatrixNormType.MAT_NORM_FROBENIUS);
 		System.out.println("||A||_F = " + normF);
@@ -291,12 +328,12 @@ public class SVDandFT {
 		//output images
 		Grid3D imageRanks = new Grid3D(image.getWidth(), image.getHeight(), rank);
 	
+		System.out.println("SVD diagonal of image: " + svd.getS().getDiag().toString());
 		//Create Rank k approximations
 		for(int k = 0; k < rank; k++)
 		{
-			//TODO
-			//TODO
-	
+			SimpleVector us = svd.getU().getCol(k).multipliedBy(svd.getSingularValues()[k]);
+			SimpleMatrix Iapprox = SimpleOperators.multiplyOuterProd(us, svd.getV().getCol(k));
 		
 			//Transfer back to grid
 			Grid2D imageRank = new Grid2D(image.getWidth(),image.getHeight());
@@ -311,7 +348,7 @@ public class SVDandFT {
 					}
 					else
 					{
-						//TODO
+						imageRank.setAtIndex(j, i, imageRanks.getAtIndex(j, i, k-1) + (float) Iapprox.getElement(i, j));
 					}
 					
 					
@@ -332,7 +369,7 @@ public class SVDandFT {
 		{
 			for(int j = 0; j < image.getWidth(); j++)
 			{
-					imageRankK.setAtIndex(j, i, (float) IapproxK.getElement(i, j));
+					//imageRankK.setAtIndex(j, i, (float) IapproxK.getElement(i, j));
 			}
 		}
 		imageRankK.show();
@@ -342,16 +379,16 @@ public class SVDandFT {
 	
 	public static void fourierExercise(Grid2D image)
 	{
-		//TODO complex image
+		Grid2DComplex imageC = new Grid2DComplex(image);
 		// Important: Grid2DComplex enlarges the original image to the next power of 2
 		imageC.show();
 		
 		//Apply 2-D discrete fourier transform
-		//Puts the DC component of the signal in the upper left corner of the FFT
-		//TODO
+
+		imageC.transformForward();
 		imageC.show("Shepp-Logan FFT");
-		
-		//TODO
+		//Puts the DC component of the signal in the upper left corner of the FFT
+		imageC.fftshift();
 		imageC.show("Shepp-Logan FFTShift");
 		
 		//Visualize log transformed FFT log(1+|FFTshift(image)|)
@@ -362,8 +399,9 @@ public class SVDandFT {
 		
 		// Important: Grid2DComplex enlarges the original image to the next power of 2
 		// When transforming back, make sure to prune the image size to your original image
-		//TODO inverse FFT
-		//TODO prune
+		imageC.transformInverse();
+		//prune
+		Grid2D imageTransf = imageC.getMagnSubGrid(0, 0, image.getWidth(), image.getHeight());
 		imageTransf.show();
 	}
 
@@ -380,6 +418,7 @@ public class SVDandFT {
 		A.setRowValue(2, new SimpleVector(14, 13, -66));
 		
 		invertSVD(A);
+		
 		optimizationProblem1(A, 1);
 		
 		//Data for problem 4 from lecture slides
@@ -388,8 +427,7 @@ public class SVDandFT {
 	
 		optimizationProblem4(xCoords, yCoords);
 		
-		
-		
+			
 		// Data for problem 2 from lecture slides
 		SimpleMatrix vectors = new SimpleMatrix(2,4);
 		vectors.setColValue(0, new SimpleVector(1.f, 1.f));
@@ -399,8 +437,9 @@ public class SVDandFT {
 		
 		optimizationProblem2(vectors);
 		
+		
 		//Load an image from file
-		String filename = "D:/04_lectures/DMIP/exercises/2014/1/yu_fill.jpg";
+		String filename = "C:/Users/rafael/workspace/Recostruction/CONRAD/src/edu/stanford/rsl/tutorial/dmip/yu_fill.jpg";
 		Grid2D image = ImageUtil.wrapImagePlus(IJ.openImage(filename)).getSubGrid(0);
 		image.show();
 		
@@ -416,7 +455,7 @@ public class SVDandFT {
 		//5. Choose Shepp Logan Phantom
 		//6. Save the resulting volume. In the ImageJ window, File-Save As->Tiff...
 		
-		String filenameShepp = "D:/04_lectures/DMIP/exercises/2014/1/shepplogan.tif";
+		String filenameShepp = "C:/Users/rafael/Documents/Estudos/FAU/DMIP/E/Shepp-Logan Phantom.tif";
 		Grid3D sheppLoganVolume = ImageUtil.wrapImagePlus(IJ.openImage(filenameShepp));
 		//To work with a 2-D image, select slice 160
 		Grid2D sheppLoganImage = sheppLoganVolume.getSubGrid(160);
@@ -426,5 +465,5 @@ public class SVDandFT {
 		
 
 	}
-*/
+
 }
