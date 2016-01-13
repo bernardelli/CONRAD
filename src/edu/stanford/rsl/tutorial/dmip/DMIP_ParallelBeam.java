@@ -219,11 +219,38 @@ public class DMIP_ParallelBeam {
 		if(filter == RampFilterType.RAMLAK)
 		{
 			// TODO: implement the ram-lak filter in the spatial domain 
+			final float odd = -1f/(float)(Math.PI*Math.PI);
+			ramp.setAtIndex(0, 0.25f);
 			
+			
+			for(int i = 1; i < paddedSize/2; i++)
+			{
+				if((i%2) == 1)
+					ramp.setAtIndex(i, odd/(i*i));
+			}
+			
+			for(int i = paddedSize/2; i < paddedSize; i++)
+			{
+				final float tmp = paddedSize -i;
+				if((i%2) == 1)
+					ramp.setAtIndex(i, odd/(tmp*tmp));
+			}
 		}
 		else if(filter == RampFilterType.SHEPPLOGAN)
 		{
 			// TODO: implement the Shepp-Logan filter in the spatial domain
+			ramp.setAtIndex(0, (float)(2/(Math.PI*Math.PI)));
+			
+			for(int i = 1; i < paddedSize /2; i++)
+			{
+				ramp.setAtIndex(i, (float)(-2.0 / (Math.PI*Math.PI*(4*i*i-1.0))));
+			}
+			
+			for(int i = paddedSize /2; i < paddedSize; i++)
+			{
+				final float tmp = paddedSize -i;
+				ramp.setAtIndex(i, (float)(-2.0 / (Math.PI*Math.PI*(4*tmp*tmp-1.0))));
+			}
 			
 		}
 		else
@@ -233,17 +260,20 @@ public class DMIP_ParallelBeam {
 		}
 		
 		// TODO: Transform ramp filter into frequency domain
-		
+		ramp.transformForward();
 		
 		Grid1DComplex sinogramF = new Grid1DComplex(sinogram,true);
 		// TODO: Transform the input sinogram signal into the frequency domain
-		
+		sinogramF.transformForward();
 		
 		// TODO: Multiply the ramp filter with the transformed sinogram
-		
+		for(int p = 0; p <sinogramF.getSize()[0]; p++ )
+		{
+			sinogramF.multiplyAtIndex(p, ramp.getRealAtIndex(p), ramp.getImagAtIndex(p));
+		}
 		
 		// TODO: Backtransformation
-
+		sinogramF.transformInverse();
 		
 		// Crop the image to its initial size
 		Grid1D ret = new Grid1D(sinogram);
@@ -273,7 +303,7 @@ public class DMIP_ParallelBeam {
 		// size of a detector Element [mm]
 		float detectorSpacing = 1.0f;	
 		// filterType: NONE, RAMLAK, SHEPPLOGAN
-		RampFilterType filter = RampFilterType.NONE;				
+		RampFilterType filter = RampFilterType.RAMLAK;				
 		
 		// 1. Create the Shepp Logan Phantom
 		SheppLogan sheppLoganPhantom = new SheppLogan(phantomSize);
